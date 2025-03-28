@@ -1,0 +1,168 @@
+your_package/
+├── your_package/       # Main package
+│   ├── __init__.py     # Exposes core functionality
+│   ├── kernels/        # Kernel functions
+│   │   ├── __init__.py
+│   │   ├── stationary.py
+│   │   │   ├── rbf_kernel
+│   │   ├── nonstationary.py
+│   │   │   ├── ns_rbf_kernel
+│   ├── models/         # GP model definitions
+│   │   ├── __init__.py
+│   │   ├── gpmodel.py
+│   │   │   ├── GaussianProcess (GPModel)
+│   │   │   │   ├── __init__
+│   │   │   │   ├── lengthscale
+│   │   │   │   ├── signal_variance
+│   │   │   │   ├── noise_variance
+│   │   │   │   ├── log_lengthscale
+│   │   │   │   ├── log_signal_variance
+│   │   │   │   ├── log_noise_variance
+│   │   │   │   ├── mean_log_lengthscale
+│   │   │   │   ├── mean_log_signal_variance
+│   │   │   │   ├── mean_log_noise_variance
+│   │   │   ├── nsgp
+│   │   ├── nsgp.py
+│   │   │   ├── NSGP  # high level interface (scikit-learn style)
+│   │   │   │   ├── __init__
+│   │   │   │   ├── fit
+│   │   │   │   ├── predict
+│   │   │   │   ├── set_params
+│   │   │   │   ├── get_params
+│   │   │   │   ├── optimizer
+│   │   │   │   ├── score
+│   ├── inference/      # Posterior computation
+│   │   ├── __init__.py
+│   │   ├── posterior.py
+│   │   │   ├── gp_posterior
+│   │   │   ├── nsgp_posterior
+│   ├── optimization/   # Optimizers & gradient computation
+│   │   ├── __init__.py
+│   │   ├── gradients.py
+│   │   │   ├── lengthscale
+│   │   │   ├── signal_variance
+│   │   │   ├── noise_variance
+│   │   │   ├── alphas
+│   │   │   ├── betas
+│   │   ├── optimizers.py
+│   │   │   ├── nsgpgrad  # does the random restarts and selects best model
+│   │   │   ├── gradient
+│   ├── utils/          # Helper functions
+│   │   ├── __init__.py
+│   │   ├── linalg.py
+│   │   │   ├── dtrtrs
+│   │   │   ├── tdot_blas
+│   │   │   ├── tdot
+│   │   │   ├── _mdot_r
+│   │   │   ├── mdot
+│   │   │   ├── jitchol
+│   │   │   ├── force_F_ordered
+│   │   │   ├── dpotrs
+│   │   │   ├── dtrtri
+│   │   │   ├── dpotri
+│   │   │   ├── pdinv
+│   │   ├── numerics.py
+│   │   │   ├── condition_number_jitter
+│   │   │   ├── is_psd_cholesky
+│   │   ├── preprocessing.py
+│   │   │   ├── normalise
+│   │   │   ├── denormalise
+│   │   ├── plotting.py
+│   │   │   ├── plot_nsgp_1d
+│   │   │   ├── plot_kernel_1d
+│   │   │   ├── plot_nsgp_2d
+│   ├── metrics/        # Performance evaluation
+│   │   ├── __init__.py
+│   │   ├── scoring.py
+│   │   │   ├── mse
+│   │   │   ├── nmse
+│   │   │   ├── nlpd
+│   │   ├── likelihoods.py
+│   │   │   ├── log_multivariate_normal_pdf
+│   │   │   ├── nsgpmll
+│   │   │   ├── mll
+│   ├── _version.py      # Versioning info
+│
+├── examples/           # Example scripts for users
+│   ├── __init__.py
+│   ├── basic_gp.py
+│   ├── nonstationary_gp.py
+│   ├── optimization_demo.py
+│
+├── tests/              # Unit and integration tests
+│   ├── __init__.py
+│   ├── test_kernels.py
+│   ├── test_models.py
+│   ├── test_likelihoods.py
+│   ├── test_inference.py
+│   ├── test_optimization.py
+│   ├── test_utils.py
+│   ├── test_metrics.py
+│
+├── docs/               # Documentation (Sphinx or MkDocs)
+│   ├── index.rst
+│   ├── installation.rst
+│   ├── usage.rst
+│   ├── api_reference.rst
+│   ├── examples.rst
+│
+├── notebooks/          # Jupyter Notebooks for tutorials
+│   ├── basic_gp.ipynb
+│   ├── nonstationary_gp.ipynb
+│   ├── optimization.ipynb
+│
+├── requirements.txt    # Dependencies
+├── setup.py            # Package installation script
+├── pyproject.toml      # Modern packaging format (optional)
+├── README.md           # Overview of the package
+├── LICENSE             # Open-source license
+├── .gitignore          # Ignore unnecessary files
+
+
+class NSGP:
+    def fit(self, X_train, Y_train):
+        self.X_train = X
+        self.Y_train = Y
+        self._train_model()
+
+    def predict(self, X_test, return_std=True, return_cov=False):
+        mean_pred, std_pred, cov_pred = self._gp_inference(X)
+        if return_cov:
+            return mean_pred, cov_pred
+        elif return_std:
+            return mean_pred, std_pred
+        return mean_pred
+
+    def set_params(self,
+        init_lengthscale=0.03,
+        init_signal_variance=0.3,
+        init_noise_variance=0.1,
+        alpha_lengthscale=,
+        alpha_signal_variance=,
+        alpha_noise_variance=,
+        beta_lengthscale=,
+        beta_signal_variance=,
+        beta_noise_variance=
+        ):
+
+    def get_params(self):
+        return {}
+
+    def optimizer(self, "grad", random_restarts=5, max_iteration=5000):
+
+    def score(self, X_test, Y_test, scoring="r2"):
+        Y_pred, Y_std = self.predict(X_test, return_std=True)  # GP Predictions
+        
+        # Dictionary of available scoring functions
+        metrics = {
+            "r2": lambda: r2_score(Y_test, Y_pred),
+            "mse": lambda: mean_squared_error(Y_test, Y_pred),
+            "nmse": lambda: mean_squared_error(Y_test, Y_pred) / np.var(Y_test),
+            "nlpd": lambda: self.negative_log_predictive_density(Y_test, Y_pred, Y_std),
+            "log_marginal_likelihood": lambda: self.log_marginal_likelihood()
+        }
+
+        if scoring not in metrics:
+            raise ValueError(f"Unknown scoring method '{scoring}'. Available: {list(metrics.keys())}")
+
+        return metrics[scoring]()  # Compute the chosen metric
