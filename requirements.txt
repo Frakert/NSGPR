@@ -1,0 +1,11 @@
+numpy
+scipy
+matplotlib
+pytorch
+pytest
+sphinx
+numba
+ipykernel
+pip
+git+https://github.com/mathLab/EZyRB
+git+https://github.com/mathLab/Smithers
