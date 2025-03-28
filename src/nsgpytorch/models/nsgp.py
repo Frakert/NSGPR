@@ -256,3 +256,4 @@ class NSGP:
             raise ValueError(f"Unknown scoring method '{scoring}'. Available: {list(metrics.keys())}")
 
         return metrics[scoring]()  # Compute the chosen metric
+    

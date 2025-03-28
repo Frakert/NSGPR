@@ -4,6 +4,7 @@ from ..kernels.stationary import rbf_kernel
 from ..kernels.nonstationary import ns_rbf_kernel
 from ..optimization.optimizers import nsgpgrad
 from ..utils.numerics import cholesky_with_jitter, cholesky_with_jitter_batch
+from ..metrics import scoring
 
 
 class GPModel:
