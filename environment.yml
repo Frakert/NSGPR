@@ -1,0 +1,15 @@
+name: ROM-NNFM
+dependencies:
+  - numpy
+  - scipy
+#  - sklearn
+  - matplotlib
+  - pytorch
+  - pytest
+  - sphinx
+  - numba
+  - ipykernel
+  - pip
+  - pip:
+    - git+https://github.com/mathLab/EZyRB
+    - git+https://github.com/mathLab/Smithers
