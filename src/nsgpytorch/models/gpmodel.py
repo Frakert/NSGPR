@@ -50,7 +50,7 @@ class GPModel:
         self.alpha_signal_variance = 1      # alphasigma    1
         self.alpha_noise_variance = 1       # alphaomega    1
 
-        self.tolerance = 1e-3               # tol           1e-3
+        self.tolerance = 1e-6               # tol           1e-3
 
         # Kernel matrices and Cholesky decompositions
         self.kernel_lengthscale = None          # Kl
@@ -69,7 +69,7 @@ class GPModel:
         self.nonstationary_functions = "lso"    # nsfuncs   "lso"
         self.optimization_method = "grad"       # optim     "grad"
         self.n_restarts = 5                # restarts  3
-        self.gradient_iterations = 5000         # graditers 5000
+        self.gradient_iterations = 500         # graditers 5000
         self.plot_iterations = False            # plotiters False
         self.verbose_output = True              # verbose   True
 
@@ -142,7 +142,7 @@ class GPModel:
     def compute_woodbury_matrix(self): # (n_targets, n_samples, n_samples)
         """Computes and caches the Woodbury matrix (Ktt_noisy⁻¹)."""
         kernel_with_noise = self.get_ns_rbf_kernel_with_noise # (n_targets, n_samples, n_samples)
-        cholesky_kernel = cholesky_with_jitter_batch(kernel_with_noise) # (n_targets, n_samples, n_samples)
+        cholesky_kernel, info = torch.linalg.cholesky_ex(kernel_with_noise)
         alpha_vector = torch.cholesky_solve(self.batch_outputs.T.unsqueeze(2), cholesky_kernel, upper=False).squeeze(-1) # (n_targets, n_samples)
         return alpha_vector[:, :, None] * alpha_vector[:, None, :] - torch.cholesky_solve(self.batch_I, cholesky_kernel, upper=False)
 
@@ -171,14 +171,14 @@ class GPModel:
     def get_ns_rbf_kernel_with_noise(self): # l_ell
         if self._ns_rbf_kernel_with_noise is None:
             kernel = self.get_ns_rbf_kernel.clone()
-            prev_noise = 1e-6
+            prev_noise = 1e-12
             noise_variance = self.noise_variance
             if type(noise_variance) == int:
-                noise_variance = max(noise_variance, 1e-3) * torch.ones(kernel.shape[0], kernel.shape[1])
+                noise_variance = max(noise_variance, 1e-6) * torch.ones(kernel.shape[0], kernel.shape[1])
             # elif noise_variance.size == 1:  # If single float (inside np.array)
             #     noise_variance = max(noise_variance.item(), 1e-3) * torch.ones(kernel.shape[0])
             else:  # If it's a vector, add it to the diagonal
-                noise_variance = torch.clamp(noise_variance, min=1e-3)
+                noise_variance = torch.clamp(noise_variance, min=1e-6)
             idx = torch.arange(kernel.shape[1], device=kernel.device)
             kernel[:, idx, idx] += noise_variance**2 - prev_noise * torch.ones(kernel.shape[0], kernel.shape[1])
             self._ns_rbf_kernel_with_noise = kernel

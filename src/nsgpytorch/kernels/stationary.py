@@ -50,7 +50,7 @@ def rbf_kernel(
     # Add noise to diagonal if the kernel matrix is square
     if input_1.shape == input_2.shape:
         # Ensure a minimum noise level for numerical stability
-        noise_variance = max(noise_variance, 1e-3)
+        noise_variance = max(noise_variance, 1e-6)
         idx = torch.arange(input_1.shape[0], device=input_1.device)
 
         kernel_matrix[idx, idx] += noise_variance**2 * torch.ones(input_1.shape[0])

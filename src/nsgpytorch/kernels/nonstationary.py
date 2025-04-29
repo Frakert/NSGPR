@@ -66,9 +66,9 @@ def ns_rbf_kernel(
     # Add noise to diagonal if the kernel matrix is square
     if input_1.shape == input_2.shape:
         if type(noise_variance) == int:
-            noise_variance = max(noise_variance, 1e-3) * torch.ones((kernel_matrix.shape[0], kernel_matrix.shape[1]))
+            noise_variance = max(noise_variance, 1e-6) * torch.ones((kernel_matrix.shape[0], kernel_matrix.shape[1]))
         else:
-            noise_variance = torch.clamp(noise_variance, min=1e-3)
+            noise_variance = torch.clamp(noise_variance, min=1e-6)
 
         idx = torch.arange(lengthscale1.shape[1], device=input_1.device)
         kernel_matrix[:, idx, idx] += noise_variance**2

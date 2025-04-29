@@ -52,7 +52,8 @@ def gradient_step(
     # Update latent function parameters with clamping
     gp.whitened_log_lengthscale = torch.clip(gp.whitened_log_lengthscale + step * dwl_l, min=-5, max=5)
     gp.whitened_log_signal_variance = torch.clip(gp.whitened_log_signal_variance + step * dwl_s, min=-5, max=5)
-    gp.whitened_log_noise_variance = torch.clip(gp.whitened_log_noise_variance + step * dwl_o, min=-np.inf, max=5)
+    # uncomment for adaptive noise variance
+    # gp.whitened_log_noise_variance = torch.clip(gp.whitened_log_noise_variance + step * dwl_o, min=-np.inf, max=5)
     gp.reset_latent_variables()
 
     # Calculate new MLL
@@ -64,7 +65,7 @@ def gradient_step(
     # Revert updates where overshooting occurred
     gp.whitened_log_lengthscale[overshoot_mask] = l_cp[overshoot_mask]
     gp.whitened_log_signal_variance[overshoot_mask] = s_cp[overshoot_mask]
-    gp.whitened_log_noise_variance[overshoot_mask] = o_cp[overshoot_mask]
+    # gp.whitened_log_noise_variance[overshoot_mask] = o_cp[overshoot_mask]
     gp.reset_latent_variables()
 
     # Restore old MLL values for overshot cases
@@ -228,9 +229,11 @@ def nsgpgrad(gp: object, gp_final: object) -> object:
     for _ in range(running_processes):
         start_new_process(current_process_id, gp, active_processes, available_slots, step, iterations)
         current_process_id += 1
-    
+
+    active_mask = torch.tensor([p is not None for p in active_processes], device=device)
+        
     while current_process_id < max_processes or any(active_processes):
-        iterations += 1
+        iterations[active_mask] += 1
         mll = gradient_step(gp, step, mlls, iterations)
 
         # Identify active slots
@@ -251,8 +254,9 @@ def nsgpgrad(gp: object, gp_final: object) -> object:
             mlls[target_ids[active_mask], restart_ids[active_mask], iterations[active_mask].long()] -
             mlls[target_ids[active_mask], restart_ids[active_mask], (iterations[active_mask] - 30).long()]
         ) < 0.1
+        maximum_iter_reached = iterations[active_mask] >= gp.gradient_iterations - 1
 
-        converged_mask = step_too_small.view(-1) | (max_iter_reached & improvement_too_small)
+        converged_mask = step_too_small.view(-1) | (max_iter_reached & improvement_too_small) | maximum_iter_reached.view(-1)
         converged_slots = active_slots[converged_mask]
 
         # Process converged slots
