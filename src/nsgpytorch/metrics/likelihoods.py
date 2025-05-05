@@ -60,7 +60,7 @@ def log_multivariate_normal_pdf(
     dimentionality = observations.shape[1]
 
     # Constant term: -0.5 * d * log(2π)
-    constant_term = -0.5 * dimentionality * np.log(2 * np.pi) * torch.ones((observations.shape[0]))
+    constant_term = -0.5 * dimentionality * np.log(2 * np.pi) * torch.ones((observations.shape[0]),device=observations.device)
 
     # Log determinant term: -0.5 * log(|Σ|)
     log_determinant_term = -torch.sum(
@@ -117,7 +117,7 @@ def nsgpmll(gp: object) -> torch.Tensor:
     """
     
     observation_covariance = gp.get_ns_rbf_kernel_with_noise 
-    zero_mean = torch.zeros((gp.batch_size))
+    zero_mean = torch.zeros((gp.batch_size), device=gp.device)
     
     # Check if non-SPD or low condition number
     L, info = torch.linalg.cholesky_ex(observation_covariance)

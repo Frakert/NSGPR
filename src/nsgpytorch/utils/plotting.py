@@ -7,6 +7,9 @@ from .preprocessing import denormalise
 from ..kernels.nonstationary import ns_rbf_kernel
 from ..optimization.gradients import lengthscale_gradient, signal_variance_gradient, noise_variance_gradient
 
+def cpu_copy(tens: torch.Tensor) -> torch.tensor:
+    """Creates a cpu copy, such that the original remains unchanged."""
+    return tens.detach().clone().to("cpu")
 
 def plot_nsgp_2d(gp):
     """
@@ -22,13 +25,20 @@ def plot_nsgp_2d(gp):
     nl = 100  # Number of contour levels
 
     # Create mesh grid
-    x1 = torch.linspace(0, 1, ng)
-    x2 = torch.linspace(0, 1, ng)
+    x1 = torch.linspace(0, 1, ng).to(gp.device)
+    x2 = torch.linspace(0, 1, ng).to(gp.device)
     X1, X2 = torch.meshgrid(x1, x2, indexing="ij")
     Xt = torch.column_stack((X1.ravel(), X2.ravel()))
 
     # Compute posterior values
     ft, ftstd, lt, st, ot = nsgp_posterior(gp, Xt)
+
+    # create cpu variants
+    if gp.device != "cpu":
+        ft, ftstd, lt, st, ot = map(cpu_copy, (ft, ftstd, lt, st, ot))
+        X1, X2 = map(cpu_copy, (X1, X2))
+    norm_inputs = cpu_copy(gp.normalized_inputs)
+
 
     # Define variables and check their existence in the GP model
     top_row_vars = {
@@ -74,7 +84,7 @@ def plot_nsgp_2d(gp):
         if n_bottom > 2:
             axs[0, 2].axis("off")
         
-        axs[0, 0].scatter(gp.normalized_inputs[:, 0], gp.normalized_inputs[:, 1], c='k', s=20, label='Training Data')
+        axs[0, 0].scatter(norm_inputs[:, 0], norm_inputs[:, 1], c='k', s=20, label='Training Data')
 
         plt.tight_layout()
         plt.show()
@@ -105,15 +115,27 @@ def plot_nsgp_1d(gp, plotlatent=False, plotderivs=False, truemodel=None):
     cols = np.array([[248, 118, 109], [0, 186, 56], [97, 156, 255]]) / 255
 
     if truemodel:
-        xt = torch.linspace(((min(truemodel.x) - gp.input_min) / gp.input_range).item(), ((max(truemodel.x) - gp.input_min) / gp.input_range).item(), 250)[:, None]
+        xt = torch.linspace(((min(truemodel.x) - gp.input_min) / gp.input_range).item(), ((max(truemodel.x) - gp.input_min) / gp.input_range).item(), 250)[:, None].to(gp.device)
     else:
-        xt = torch.linspace(-0.1, 1.1, 250)[:, None]
+        xt = torch.linspace(-0.1, 1.1, 250)[:, None].to(gp.device)
     
 
     ft, ftstd, lt, st, ot = nsgp_posterior(gp, xt)
     xt = xt * gp.input_range + gp.input_min
     
     xtr, ytr, *_ = denormalise(gp)
+
+    # Placed here to get all the computations in 1 place
+    if plotderivs:
+        dl_l = gp.cholesky_lengthscale @ lengthscale_gradient(gp)
+        dl_s = gp.cholesky_signal_variance @ signal_variance_gradient(gp)
+        dl_o = gp.cholesky_noise_variance @ noise_variance_gradient(gp)
+
+    # create cpu variants
+    if gp.device != "cpu":
+        ft, ftstd, lt, st, ot = map(cpu_copy, (ft, ftstd, lt, st, ot))
+        xt, xtr, ytr = map(cpu_copy, (xt, xtr, ytr))
+        truemodel.to("cpu")
 
     for n in range(ft.shape[0]): # itterate over n_targets
 
@@ -155,9 +177,6 @@ def plot_nsgp_1d(gp, plotlatent=False, plotderivs=False, truemodel=None):
         
         if plotderivs:
             plt.subplot(squares, 1, 3)
-            dl_l = gp.cholesky_lengthscale @ lengthscale_gradient(gp)
-            dl_s = gp.cholesky_signal_variance @ signal_variance_gradient(gp)
-            dl_o = gp.cholesky_noise_variance @ noise_variance_gradient(gp)
             plt.stem(xtr, dl_o, linefmt=cols[2], markerfmt='o', label='Noise Variance Derivative')
             plt.stem(xtr, dl_s, linefmt=cols[1], markerfmt='o', label='Signal Variance Derivative')
             plt.stem(xtr, dl_l, linefmt=cols[0], markerfmt='o', label='Lengthscale Derivative')
@@ -174,16 +193,16 @@ def plot_nsgp_1d(gp, plotlatent=False, plotderivs=False, truemodel=None):
 
 def plot_kernel_1d(gp):
 
-    xt = torch.linspace(0, 1, 250)[:, None]
+    xt = torch.linspace(0, 1, 250)[:, None].to(gp.device)
     
     ft, ftstd, lt, st, ot = nsgp_posterior(gp, xt)
     xt = xt * gp.input_range + gp.input_min
 
     K = ns_rbf_kernel(xt, xt, lt / gp.output_scale.unsqueeze(1), lt / gp.output_scale.unsqueeze(1),
                         st / gp.output_scale.unsqueeze(1), st / gp.output_scale.unsqueeze(1), ot / gp.output_scale.unsqueeze(1))
-    
+    K_cpu = cpu_copy(K)
     for n in range(ft.shape[0]): # itterate over n_targets
-        plt.imshow(K[n], cmap='hot', interpolation='nearest')
+        plt.imshow(K_cpu[n], cmap='hot', interpolation='nearest')
         plt.title('Kernel Matrix')
         plt.colorbar()
         plt.show()

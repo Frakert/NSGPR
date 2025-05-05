@@ -52,7 +52,6 @@ def rbf_kernel(
         # Ensure a minimum noise level for numerical stability
         noise_variance = max(noise_variance, 1e-6)
         idx = torch.arange(input_1.shape[0], device=input_1.device)
-
-        kernel_matrix[idx, idx] += noise_variance**2 * torch.ones(input_1.shape[0])
+        kernel_matrix[idx, idx] += noise_variance**2 * torch.ones(input_1.shape[0]).to(input_1.device)
 
     return kernel_matrix

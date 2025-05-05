@@ -42,7 +42,9 @@ def denormalise(gp, ft=0, ftstd=0, lt=0, st=0, ot=0):
     ytr = gp.normalized_outputs * gp.output_scale + gp.output_mean
     ft = ft * gp.output_scale[:, None]  + gp.output_mean[:, None]
     ftstd = ftstd * gp.output_scale[:, None]
-    lt = lt * gmean(gp.input_range)
+    # gmean doesnt work when the input range is on gpu, create a copy and place it on cpu
+    cpu_input_range = gp.input_range.detach().clone().to("cpu")
+    lt = lt * gmean(cpu_input_range)
     ot = ot * gp.output_scale[:, None]
     st = st * gp.output_scale[:, None]
 

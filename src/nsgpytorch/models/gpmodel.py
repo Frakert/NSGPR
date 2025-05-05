@@ -33,9 +33,9 @@ class GPModel:
         self.batch_size = batch_size
         self.batch_I = torch.eye(self.n_samples, device=self.device).expand(batch_size, -1, -1)  # Identity matrix for each batch
 
-        self.which_target = torch.empty((self.batch_size,)) # whould be a vector of size (batch_size) and contains information about which target is calculates (for woodbury and mll) and usefull for saving if mll is higher
-        self.which_restart = torch.empty((self.batch_size,))
-        self.mll = torch.full((self.n_targets,), float('-inf')) # vector of size (n_targets) the list of mll values for each target, if new process has higher mll value it will be replaced
+        self.which_target = torch.empty((self.batch_size,),device = self.device) # whould be a vector of size (batch_size) and contains information about which target is calculates (for woodbury and mll) and usefull for saving if mll is higher
+        self.which_restart = torch.empty((self.batch_size,), device=self.device)
+        self.mll = torch.full((self.n_targets,), float('-inf'),device=self.device) # vector of size (n_targets) the list of mll values for each target, if new process has higher mll value it will be replaced
 
         # Kernel parameters                 MATLAB variables
         self.initial_lengthscale = [0.01, 0.05, 0.1, 0.01, 0.05, 0.1]     # init_ell      0.05 # should be vectors of size (n_gradient_itterations) now is it seen as [0.05, rand, rand, rand, rand]
@@ -82,7 +82,7 @@ class GPModel:
         self.normalized_inputs = (self.inputs - self.input_min) / self.input_range
         self.normalized_outputs = (self.outputs - self.output_mean) / self.output_scale
 
-        self.batch_outputs = torch.empty((self.n_samples, self.batch_size)) # (to use in woodbury matrix and mll) (batch_size, n_samples)
+        self.batch_outputs = torch.empty((self.n_samples, self.batch_size),device=self.device) # (to use in woodbury matrix and mll) (batch_size, n_samples)
 
         # Squared Euclidean distance matrix
         self.distance_matrix = torch.cdist(self.normalized_inputs, self.normalized_inputs, p=2).pow(2)
@@ -120,9 +120,9 @@ class GPModel:
         self.cholesky_noise_variance = cholesky_with_jitter(self.kernel_noise_variance)    # (n_samples, n_samples) same kernel for all targets
 
         # Set initial parameters in white-log domain
-        self.whitened_log_lengthscale = torch.empty((self.batch_size, self.n_samples))     # (n_targets, n_samples) initial is the same for all targets, not for restarts thus could compute one for each initial value and just copy to correct locations in batch
-        self.whitened_log_signal_variance = torch.empty((self.batch_size, self.n_samples)) 
-        self.whitened_log_noise_variance = torch.empty((self.batch_size, self.n_samples)) 
+        self.whitened_log_lengthscale = torch.empty((self.batch_size, self.n_samples), device = self.device)     # (n_targets, n_samples) initial is the same for all targets, not for restarts thus could compute one for each initial value and just copy to correct locations in batch
+        self.whitened_log_signal_variance = torch.empty((self.batch_size, self.n_samples), device = self.device) 
+        self.whitened_log_noise_variance = torch.empty((self.batch_size, self.n_samples), device = self.device) 
 
         self._woodbury_matrix = None
         self._ns_rbf_kernel = None
@@ -174,13 +174,13 @@ class GPModel:
             prev_noise = 1e-12
             noise_variance = self.noise_variance
             if type(noise_variance) == int:
-                noise_variance = max(noise_variance, 1e-6) * torch.ones(kernel.shape[0], kernel.shape[1])
+                noise_variance = max(noise_variance, 1e-6) * torch.ones(kernel.shape[0], kernel.shape[1] ,device=self.device)
             # elif noise_variance.size == 1:  # If single float (inside np.array)
             #     noise_variance = max(noise_variance.item(), 1e-3) * torch.ones(kernel.shape[0])
             else:  # If it's a vector, add it to the diagonal
                 noise_variance = torch.clamp(noise_variance, min=1e-6)
             idx = torch.arange(kernel.shape[1], device=kernel.device)
-            kernel[:, idx, idx] += noise_variance**2 - prev_noise * torch.ones(kernel.shape[0], kernel.shape[1])
+            kernel[:, idx, idx] += noise_variance**2 - prev_noise * torch.ones(kernel.shape[0], kernel.shape[1], device=self.device)
             self._ns_rbf_kernel_with_noise = kernel
         return self._ns_rbf_kernel_with_noise
 
@@ -259,7 +259,8 @@ def nsgp(
     y: torch.Tensor, 
     nonstationary_functions: str='lso', 
     optim: str='grad', 
-    batch_size: int=1, 
+    batch_size: int=1,
+    device: torch.device=torch.device("cpu"),
     *args: dict, 
     **kwargs: dict
 ) -> object:
@@ -287,7 +288,7 @@ def nsgp(
         Learned GP model.
     """
     # Initialize GP model
-    gp = GPModel(x, y, batch_size=batch_size) 
+    gp = GPModel(x, y, device=device, batch_size=batch_size) 
 
     # Set remaining arguments as attributes in the GP model
     for i in range(0, len(args), 2):
@@ -301,7 +302,7 @@ def nsgp(
     gp.initialize_kernels() # Perform necessary initializations (probably needs to be placed in nspgrad because is dependend on batch allocation) need if if parameters of kernels are changed
 
     # Initialize final GP
-    gp_final = GPModel(x, y, batch_size=gp.n_targets) 
+    gp_final = GPModel(x, y, device=device, batch_size=gp.n_targets) 
 
     # Set same arguments as attributes in the GP model
     for i in range(0, len(args), 2):

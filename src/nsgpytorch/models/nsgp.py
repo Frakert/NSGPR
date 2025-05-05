@@ -34,6 +34,7 @@ class NSGP:
         self.gp = None
         self.X_train = None
         self.Y_train = None
+        self.device = torch.device("cpu") # Default to cpu
         self.hyperparams = {
             "init_lengthscale": [0.01, 0.05, 0.1, 0.01, 0.05, 0.1],
             "init_signal_variance": [0.3, 0.3, 0.3, 0.5, 0.5, 0.5],
@@ -98,6 +99,7 @@ class NSGP:
             nonstationary_functions=self.nonstationary_functions,
             optim=self.optimization_method,
             batch_size=batch_size,
+            device = self.device,
             **self.hyperparams
         )
 
@@ -256,4 +258,12 @@ class NSGP:
             raise ValueError(f"Unknown scoring method '{scoring}'. Available: {list(metrics.keys())}")
 
         return metrics[scoring]()  # Compute the chosen metric
+    
+    def to(self, device):
+        """
+        Move torch model to another device type.
+        """
+        self.device = device
+    
+
     

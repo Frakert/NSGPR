@@ -114,17 +114,17 @@ def start_new_process(
     # Initialization of hyperparameters
     gp.whitened_log_lengthscale[slot_idx] = torch.linalg.solve_triangular(
         gp.cholesky_lengthscale, 
-        np.log(gp.initial_lengthscale[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2), 
+        np.log(gp.initial_lengthscale[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2).to(gp.cholesky_lengthscale.device), 
         upper=False
     ).squeeze(-1)
     gp.whitened_log_signal_variance[slot_idx] = torch.linalg.solve_triangular(
         gp.cholesky_signal_variance, 
-        np.log(gp.initial_signal_variance[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2), 
+        np.log(gp.initial_signal_variance[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2).to(gp.cholesky_signal_variance.device), 
         upper=False
     ).squeeze(-1)
     gp.whitened_log_noise_variance[slot_idx] = torch.linalg.solve_triangular(
         gp.cholesky_noise_variance, 
-        np.log(gp.initial_noise_variance[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2), 
+        np.log(gp.initial_noise_variance[restart]) * torch.ones(1, gp.n_samples).unsqueeze(2).to(gp.cholesky_noise_variance.device), 
         upper=False
     ).squeeze(-1)
 

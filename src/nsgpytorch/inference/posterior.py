@@ -67,7 +67,7 @@ def gp_posterior(
     # Add adaptive jitter to diagnonal to improve numerical stability
     jitter = condition_number_jitter(K_train_train, cond_thresh=1e4)
     idx = torch.arange(K_train_train.shape[1], device=K_train_train.device)
-    K_train_train[idx, idx] += jitter * torch.ones(K_train_train.shape[0])
+    K_train_train[idx, idx] += jitter * torch.ones(K_train_train.shape[0], device=K_train_train.device)
 
     # Cholesky decomposition for stable matrix inversion
     woodbury_chol = torch.linalg.cholesky(K_train_train)
